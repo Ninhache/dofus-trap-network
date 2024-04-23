@@ -1,1 +1,0 @@
-window.onmousemove=function(e){const o=document.getElementsByClassName("mouse-icon")[0];o&&(o.style.left=e.pageX+"px",o.style.top=e.pageY+"px")};
