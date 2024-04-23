@@ -3461,7 +3461,7 @@ const SpellData: SpellDataType = {
     icon: "./assets/img/spells/Select.svg",
     sfx: null,
     sfxSize: 1,
-    category: undefined,
+    category: null, // todo: understand why it was undefined before
     levels: [
       {
         spellId: SpellType.Select,
