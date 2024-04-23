@@ -109,3 +109,6 @@ dist
 # Tests
 tests/__coverage__/
 tests/**/*.jsx
+
+# empty doc
+docs/**
