@@ -1,11 +1,12 @@
 import { SpellCategory, EffectType, TriggerType, Area } from "@src/enums";
+import { Nullable } from "./NullableType";
 
 export type Effect = {
   targetMask: string,
   value: number,
   min: number, // DiceNum in SpellLevels
   max: number, // DiceSide in SpellLevels
-  triggers: TriggerType, // TODO: need to be able to put multiple triggers
+  triggers: Nullable<TriggerType>, // TODO: need to be able to put multiple triggers
   effectType: EffectType,
   area: Area
 }
@@ -25,10 +26,10 @@ export type SpellLevel = {
 
 export type Spell = {
   name: string,
-  icon: string,
-  sfx: string,
+  icon: Nullable<string>,
+  sfx: Nullable<string>,
   sfxSize: number,
-  category: SpellCategory,
+  category: Nullable<SpellCategory>,
   levels: Array<SpellLevel>
 }
 
