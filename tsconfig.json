@@ -1,4 +1,6 @@
 {
+  "extends": "./tsconfig.common.json",
+  
   "compilerOptions": {
     "jsx": "react-jsx",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -18,7 +20,8 @@
       "./src/@types"
     ],
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+
   },
   "include": ["src"]
 }
