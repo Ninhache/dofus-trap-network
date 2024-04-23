@@ -8,19 +8,16 @@ type Props = {
   selected: boolean;
 };
 
-class SpellComponent extends React.Component<Props>
-{
-  render() {
-    return <div className={`spell ${this.props.selected ? "selected-spell" : ""}`} onClick={() => { this.props.onClick(this.props.spell); }}>
-      <img
-        width="45"
-        height="45"
-        src={this.props.spell.icon}
-        alt={this.props.spell.name}
-        draggable="false"
-      />
-    </div>;
-  }
+const SpellComponent: React.FC<Props> = ({ spell, onClick, selected }) => {
+  return (<div className={`spell ${selected ? "selected-spell" : ""}`} onClick={() => { onClick(spell); }}>
+    <img
+      width="45"
+      height="45"
+      src={spell.icon}
+      alt={spell.name}
+      draggable="false"
+    />
+  </div>);
 }
 
 export default SpellComponent;
