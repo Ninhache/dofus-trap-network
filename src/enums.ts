@@ -34,7 +34,8 @@ export enum EffectType {
   HealLastDamage,
   PlaceEndTurnGlyph,
   SymmetricalTeleport,
-  Toggle
+  Toggle,
+  Unknown
 }
 
 export enum EffectCategory {
@@ -225,7 +226,7 @@ export enum BuffType {
   BoostSpell
 }
 
-export const StateName = {
+export const StateName: { [key: number]: string } = {
   [State.MassTrap]: "Mass Trap",
   [State.Gravity]: "Gravity"
 }
@@ -241,7 +242,7 @@ export const TrapClasses: { [key: number]: string } = {
   0: 'desynchro',
 };
 
-export const EffectTypeCategory = {
+export const EffectTypeCategory: Partial<{ [key in EffectType]: EffectCategory }> = {
   [EffectType.Pull]: EffectCategory.Movement,
   [EffectType.Push]: EffectCategory.Movement,
   [EffectType.WaterDamage]: EffectCategory.Damage,
@@ -265,7 +266,7 @@ export const EffectTypeCategory = {
   [EffectType.CancelSpell]: EffectCategory.Secondary,
   [EffectType.BoostSpell]: EffectCategory.Secondary,
   [EffectType.HealLastDamage]: EffectCategory.Secondary,
-  [EffectType.PlaceEndTurnGlyph]: EffectCategory.Secondary
+  [EffectType.PlaceEndTurnGlyph]: EffectCategory.Secondary,
 };
 
 export interface Coordinates {
