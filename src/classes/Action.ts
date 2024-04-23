@@ -10,6 +10,7 @@ import SpellData from "@json/Spells";
 import { strToMaskArray } from "@src/utils/utils";
 import Cell from "./Cell";
 import { receiveDamages, sendDamages, receivePushDamages, getBestElement, effectToElement } from "@src/utils/damageUtils";
+import { Nullable } from "@src/@types/NullableType";
 
 export default class Action {
   uuid: string;
@@ -20,9 +21,9 @@ export default class Action {
   type: EffectType;
   value: number;
   effect: Effect;
-  component: ActionComponent;
-  originTrap?: Trap;
-  targetMask?: Array<Mask>;
+  component: typeof ActionComponent;
+  originTrap: Nullable<Trap>;
+  targetMask: Array<Mask>;
   passedMask: boolean;
   cancelled: boolean;
   spell: SpellLevel;

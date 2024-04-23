@@ -1,15 +1,17 @@
 import Entity from "@classes/Entity";
-import { Coordinates, EffectType, SpellElement } from "@src/enums";
+import { Coordinates, EffectType, OffensiveStats, SpellElement } from "@src/enums";
 import { getDistance } from "./mapUtils";
 
-export function effectToElement(effect: EffectType) {
-  return {
+export function effectToElement(effect: EffectType): SpellElement | undefined {
+  const mapping: Partial<Record<EffectType, SpellElement>> = {
     [EffectType.NeutralDamage]: SpellElement.Neutral,
     [EffectType.WaterDamage]: SpellElement.Water,
     [EffectType.FireDamage]: SpellElement.Fire,
     [EffectType.EarthDamage]: SpellElement.Earth,
-    [EffectType.AirDamage]: SpellElement.Air
-  }[effect];
+    [EffectType.AirDamage]: SpellElement.Air,
+  };
+
+  return mapping[effect];// TypeScript knows this could be undefined if the effect isn't a key in `mapping`
 }
 
 /**
@@ -107,12 +109,13 @@ export function receivePushDamages(value: number, fromEntity: Entity, toEntity: 
  * @returns {SpellElement} The element
  */
 export function getBestElement(entity: Entity) {
+  
   const stats = [
-    { element: 'strength', damage: 'damageEarth', effect: SpellElement.Earth },
-    { element: 'strength', damage: 'damageNeutral', effect: SpellElement.Neutral },
-    { element: 'intelligence', damage: 'damageFire', effect: SpellElement.Fire },
-    { element: 'chance', damage: 'damageWater', effect: SpellElement.Water },
-    { element: 'agility', damage: 'damageAir', effect: SpellElement.Air }
+    { element: 'strength' as keyof OffensiveStats, damage: 'damageEarth' as keyof OffensiveStats,  effect: SpellElement.Earth },
+    { element: 'strength' as keyof OffensiveStats, damage: 'damageNeutral' as keyof OffensiveStats,  effect: SpellElement.Neutral },
+    { element: 'intelligence' as keyof OffensiveStats, damage: 'damageFire' as keyof OffensiveStats,  effect: SpellElement.Fire },
+    { element: 'chance' as keyof OffensiveStats, damage: 'damageWater' as keyof OffensiveStats,  effect: SpellElement.Water },
+    { element: 'agility' as keyof OffensiveStats, damage: 'damageAir' as keyof OffensiveStats,  effect: SpellElement.Air },
   ];
 
   stats.sort((a, b) => {
