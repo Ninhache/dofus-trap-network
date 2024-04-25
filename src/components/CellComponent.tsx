@@ -12,11 +12,7 @@ type Props = {
   onMouseLeave: (pos: Coordinates, entityPriority: boolean) => void;
 };
 
-type State = {
-  highlighted: boolean
-};
-
-const CellComponent: React.FC<Props & State> = ({ x, y, id, width, height, onMouseEnter, onMouseLeave }) => {
+const CellComponent: React.FC<Props> = ({ x, y, id, width, height, onMouseEnter, onMouseLeave }) => {
   const [isHighlighted, setHighlighted] = React.useState(false);
 
   const handleClick = (top: boolean) => {

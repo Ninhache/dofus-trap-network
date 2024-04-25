@@ -5,48 +5,49 @@ import * as React from "react";
 import CellComponent from "@components/CellComponent";
 import EntityComponent from "@components/EntityComponent";
 import { Coordinates } from "@src/enums";
+import { Nullable } from "@src/@types/NullableType";
 
 type Props = {
-  entities: Array<Entity | Cell>;
-  startPoint: Coordinates;
+  entitiesProps: Array<Entity | Cell>;
+  startPoint: Nullable<Coordinates>;
 };
 
-class EntityLayerComponent extends React.Component<Props>
-{
-  render() {
-    const entities: Array<JSX.Element> = [];
-    const cellWidth: number = 100 / (Game.width + 0.5);
-    const cellHeight: number = cellWidth / 2;
+const EntityLayerComponent: React.FC<Props> = ({ entitiesProps, startPoint }) => {
 
-    for (let i: number = 0; i < this.props.entities.length; i++) {
-      const entity = this.props.entities[i];
-      if (entity instanceof Cell) {
-        entities.push(<CellComponent
-          x={entity.pos.x}
-          y={entity.pos.y}
-          id={entity.pos.y * Game.width + entity.pos.x}
-          width={cellWidth}
-          height={cellHeight}
-          key={entity.uuid}
-          onMouseEnter={() => {return;} }
-          onMouseLeave={() => {return;} }
-        />);
-      } else {
-        entities.push(<EntityComponent
-          entity={entity}
-          ref={(component) => {entity.component = component}}
-          key={entity.uuid}
-        />);
-      }
+  const entities: Array<JSX.Element> = [];
+  const cellWidth: number = 100 / (Game.width + 0.5);
+  const cellHeight: number = cellWidth / 2;
+
+  for (let i: number = 0; i < entitiesProps.length; i++) {
+    const entity = entitiesProps[i];
+    if (entity instanceof Cell) {
+      entities.push(<CellComponent
+        x={entity.pos.x}
+        y={entity.pos.y}
+        id={entity.pos.y * Game.width + entity.pos.x}
+        width={cellWidth}
+        height={cellHeight}
+        key={entity.uuid}
+        onMouseEnter={() => { return; }}
+        onMouseLeave={() => { return; }}
+      />);
+    } else {
+      entities.push(<EntityComponent
+        key={entity.uuid}
+        entity={entity}
+        ref={entity.component}
+      />);
     }
+  }
 
-    if (this.props.startPoint) {
-      const root: Coordinates = {
-        x: (this.props.startPoint.x) * cellWidth + ((this.props.startPoint.y) % 2 === 0 ? 0 : cellWidth / 2),
-        y: (this.props.startPoint.y) * cellHeight / 2
-      };
+  if (startPoint) {
+    const root: Coordinates = {
+      x: (startPoint.x) * cellWidth + ((startPoint.y) % 2 === 0 ? 0 : cellWidth / 2),
+      y: (startPoint.y) * cellHeight / 2
+    };
 
-      entities.push(<image
+    entities.push(
+      <image
         className="entity-image"
         key="startpoint"
         href="./assets/img/entities/Target.svg"
@@ -55,10 +56,12 @@ class EntityLayerComponent extends React.Component<Props>
         width={cellWidth * 0.7}
         height={cellHeight * 0.7}
       />);
-    }
-
-    return entities;
   }
+
+  return (<>
+    {entities}
+  </>);
 }
+
 
 export default EntityLayerComponent;
