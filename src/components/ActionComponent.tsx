@@ -1,31 +1,40 @@
-import * as React from "react";
 import "@assets/scss/Spells.scss";
 import { ActionType, EffectCategory, EffectType, EffectTypeCategory, StateName, TrapClasses } from "@src/enums";
 import Action from "@classes/Action";
 import { Trans } from "react-i18next";
 import { colorToInt } from "@src/utils/utils";
 import SpellData from "@json/Spells";
+import { forwardRef, useImperativeHandle, useState } from "react";
 
 type Props = {
   type: ActionType;
   action: Action;
 };
 
-type States = {
-  highlighted: boolean;
-};
+export interface ActionComponentRef {
+  setHighlight: (highlight: boolean) => void
+}
 
-const ActionComponent: React.FC<Props & States> = ({ type, action, highlighted }) => {
-  const [isHighlighted, setHighlighted] = React.useState(highlighted);
+const ActionComponent = forwardRef<ActionComponentRef, Props>((props: Props, ref) => {
+
+  const { type, action } = props;
+
+  const [isHighlighted, setHighlighted] = useState(false);
+
+  useImperativeHandle(ref, () => ({
+    setHighlight: (highlight: boolean) => {
+      setHighlighted(highlight)
+    },
+  }));
 
   const onMouseEnter = () => {
-    action.originTrap?.component?.setHighlight(true);
-    action.target.component?.setHighlight(true);
+    action.originTrap?.component?.current?.setHighlight(true);
+    action.target.component.current?.setHighlight(true);
   }
 
   const onMouseLeave = () => {
-    action.originTrap?.component?.setHighlight(false);
-    action.target.component?.setHighlight(false);
+    action.originTrap?.component?.current?.setHighlight(false);
+    action.target.component.current?.setHighlight(false);
   }
 
   const actionClasses = {
@@ -141,6 +150,6 @@ const ActionComponent: React.FC<Props & States> = ({ type, action, highlighted }
       </div>
     </div>
   );
-}
+});
 
 export default ActionComponent;

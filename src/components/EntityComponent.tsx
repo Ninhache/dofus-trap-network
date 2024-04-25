@@ -2,48 +2,47 @@ import Entity from "@classes/Entity";
 import Game from "@classes/Game";
 import { AreaType, Coordinates, State, Team } from "@src/enums";
 import { isInArea } from "@src/utils/mapUtils";
-import * as React from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
+
+export interface EntityComponentRef {
+  setHighlight: (highlight: boolean) => void;
+  show: () => void;
+  hide: () => void;
+  move: (fromPos: Coordinates, toPos: Coordinates) => void;
+}
+
+type ToDisplayState = State.Chakra | State.Gravity;
 
 type Props = {
   entity: Entity;
 };
 
-type States = {
-  animX: number;
-  animY: number;
-  animate: boolean;
-  display: boolean;
-  highlight: boolean;
-}
+const EntityComponent = forwardRef<EntityComponentRef, Props>((props, ref) => {
+  
+  const { entity } = props;
 
-class EntityComponent extends React.Component<Props, States>
-{
-  transitionCounter: number;
+  let transitionCounter: number = 0;
 
-  constructor(props: Props) {
-    super(props);
+  const [animX, setAnimX] = useState<number>(0);
+  const [animY, setAnimY] = useState<number>(0);
+  const [animate, setAnimate] = useState<boolean>(false);
+  const [display, setDisplay] = useState<boolean>(true); // Maybe for a future feature
+  const [highlight, setHighlight] = useState<boolean>(false);
 
-    this.state ={
-      animX: undefined,
-      animY: undefined,
-      animate: false,
-      display: true,
-      highlight: false
-    };
-    this.transitionCounter = 0;
-  }
-
-  show() {
-    this.setState((state) => {
-      return { ...state, display: true }
-    });
-  }
-
-  hide() {
-    this.setState((state) => {
-      return { ...state, display: false }
-    });
-  }
+  useImperativeHandle(ref, () => ({
+    setHighlight: (highlight: boolean) => {
+      setHighlight(highlight);
+    },
+    show: () => {
+      setDisplay(true);
+    },
+    hide: () => {
+      setDisplay(false);
+    },
+    move: (fromPos: Coordinates, toPos: Coordinates) => {
+      move(fromPos, toPos);
+    }
+  }));
 
   /**
    * Moves an element on the screen.
@@ -53,66 +52,62 @@ class EntityComponent extends React.Component<Props, States>
    * @param {Coordinates} fromPos Starting position
    * @param {Coordinates} toPos Ending position
    */
-  move(fromPos: Coordinates, toPos: Coordinates) {
-    this.transitionCounter = 2;
+  const move = (fromPos: Coordinates, toPos: Coordinates) => {
+    transitionCounter = 2;
     if (isInArea(fromPos, { type: AreaType.Diagonal, min: 0, max: 40 }, toPos)) {
-      this.transitionCounter = 1;
+      transitionCounter = 1;
     }
 
-    this.setState({
-      animX: toPos.x,
-      animY: toPos.y,
-      animate: true
-    });
+    setAnimX(toPos.x);
+    setAnimY(toPos.y);
+    setAnimate(true);
   }
 
   /**
    * Function triggered when a css transition of the entity circle ends.
    */
-  onTransitionEnd() {
-    if (this.transitionCounter <= 1) {
-      this.setState({
-        animX: undefined,
-        animY: undefined,
-        animate: false
-      });
+  const onTransitionEnd = () => {
+    if (transitionCounter <= 1) {
+
+      setAnimX(0);
+      setAnimY(0);
+      setAnimate(false);
+
       Game.onEntityTransitionEnd();
     } else {
-      this.transitionCounter--;
+      transitionCounter += -1;
     }
   }
 
-  setHighlight(highlight: boolean) {
-    this.setState((state) => ({ ...state, highlight }));
-  }
+  if (!display) return <></>;
 
-  render() {
-    if (!this.state.display) return;
+  const cellWidth: number = 100 / (Game.width + 0.5);
+  const cellHeight: number = cellWidth / 2;
 
-    const cellWidth: number = 100 / (Game.width + 0.5);
-    const cellHeight: number = cellWidth / 2;
+  const width: number = 200 / (Game.width * 2 + (Game.width > 1 ? 1 : 0)) * entity.data.defaultScale;
+  const height: number = width; // Square image with transparent padding
 
-    const width: number = 200 / (Game.width * 2 + (Game.width > 1 ? 1 : 0)) * this.props.entity.data.defaultScale;
-    const height: number = width; // Square image with transparent padding
+  const root: Coordinates = {
+    x: (animX ?? entity.pos.x) * cellWidth + (animY ?? entity.pos.y) % 2 === 0 ? 0 : (cellWidth / 2),
+    y: (animY ?? entity.pos.y) * cellHeight / 2
+  };
 
-    const root: Coordinates = {
-      x: (this.state.animX ?? this.props.entity.pos.x) * cellWidth + ((this.state.animY ?? this.props.entity.pos.y) % 2 === 0 ? 0 : cellWidth / 2),
-      y: (this.state.animY ?? this.props.entity.pos.y) * cellHeight / 2
-    };
+  const states: Record<ToDisplayState, string> = {
+    [State.Chakra]: "./assets/img/states/Chakra.svg",
+    [State.Gravity]: "./assets/img/states/Gravity.svg"
+  };
 
-    const states = {
-      [State.Chakra]: "./assets/img/states/Chakra.svg",
-      [State.Gravity]: "./assets/img/states/Gravity.svg"
-    };
+  const stateComponents: Array<JSX.Element> = [];
+  const stateNum: number = entity.states.toString(2).split('1').length - 1;
+  let i: number = 0;
+  for (const key in states) {
+    if (states.hasOwnProperty(key) && key in State) {
+      const stateKey = State[key as keyof typeof State];
 
-    const stateComponents: Array<JSX.Element> = [];
-    const stateNum: number = this.props.entity.states.toString(2).split('1').length - 1;
-    let i: number = 0;
-    for (const key in states) {
-      if (this.props.entity.hasState(parseInt(key))) {
+      if (entity.hasState(stateKey)) {
         stateComponents.push(<image
           className="entity-state"
-          href={states[key]}
+          href={states[stateKey as ToDisplayState]}
           x={root.x - cellWidth / 5 + cellWidth / 2 + (2 * i - (stateNum - 1)) * cellWidth / 8}
           y={root.y - cellWidth / 5}
           width={cellWidth / 2.5}
@@ -121,29 +116,30 @@ class EntityComponent extends React.Component<Props, States>
         i++;
       }
     }
-
-    return (
-      <g className={`entity ${this.state.animate ? "animating" : ""} ${this.props.entity.team === Team.Attacker ? "attacker" : "defender"} ${this.state.highlight ? "highlighted" : ""}`}>
-        <ellipse
-          className="entity-circle"
-          cx={root.x + cellWidth / 2}
-          cy={root.y + cellHeight / 2}
-          rx={cellWidth * 0.3}
-          ry={cellHeight * 0.3}
-          onTransitionEnd={() => { this.onTransitionEnd() }}
-        />
-        <image
-          className="entity-image"
-          href={this.props.entity.data.image}
-          x={root.x - width / 2 + cellWidth / 2 + this.props.entity.data.offsetX * cellWidth}
-          y={root.y  - height + cellHeight * 0.75 + this.props.entity.data.offsetY * cellHeight}
-          width={width}
-          height={height}
-        />
-        {stateComponents}
-      </g>
-    );
   }
-}
+
+  return (
+    <g className={`entity ${animate ? "animating" : ""} ${entity.team === Team.Attacker ? "attacker" : "defender"} ${highlight ? "highlighted" : ""}`}>
+      <ellipse
+        className="entity-circle"
+        cx={root.x + cellWidth / 2}
+        cy={root.y + cellHeight / 2}
+        rx={cellWidth * 0.3}
+        ry={cellHeight * 0.3}
+        onTransitionEnd={() => { onTransitionEnd() }}
+      />
+      <image
+        className="entity-image"
+        href={entity.data.image}
+        x={root.x - width / 2 + cellWidth / 2 + entity.data.offsetX * cellWidth}
+        y={root.y - height + cellHeight * 0.75 + entity.data.offsetY * cellHeight}
+        width={width}
+        height={height}
+      />
+      {stateComponents}
+    </g>
+  );
+
+});
 
 export default EntityComponent
