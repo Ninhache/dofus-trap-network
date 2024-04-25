@@ -3,7 +3,6 @@ import Trap from "./Trap";
 
 class TrapCell {
   pos: Coordinates;
-  id: number;
   color: Color;
   borders: CellBorders;
   trap: Trap;

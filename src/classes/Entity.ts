@@ -1,12 +1,15 @@
 import { Coordinates, EntityType, SpellTrigger, State, OffensiveStats, Team, DefensiveStats, TriggerType, Buff } from "@src/enums";
 import Entities from "@json/Entities";
-import EntityComponent from "@components/EntityComponent";
+// import EntityComponent from "@components/EntityComponent";
 import { v4 as uuidv4 } from "uuid";
 import { EntityData } from "@src/@types/EntityDataType";
 import Game from "./Game";
 import SpellData from "@json/Spells";
 import Trap from "./Trap";
 import { BuffType } from "@src/enums";
+import { EntityComponentRef } from "@components/EntityComponent";
+import { createRef } from "react";
+import { Nullable } from "@src/@types/NullableType";
 
 class Entity {
   uuid: string;
@@ -14,8 +17,8 @@ class Entity {
   initialPos: Coordinates;
   team: Team;
   data: EntityData;
-  animPos: Coordinates;
-  component: EntityComponent;
+  animPos: Nullable<Coordinates>;
+  component: React.RefObject<EntityComponentRef>;
   states: State;
   initialStates: State;
   triggers: Array<SpellTrigger>;
@@ -41,7 +44,8 @@ class Entity {
     this.initialPos = pos;
     this.team = team;
     this.data = Entities[type];
-    this.animPos = undefined;
+    this.component = createRef();
+    this.animPos = null;
     this.states = 0;
     this.initialStates = this.states;
     this.triggers = [];
@@ -96,6 +100,7 @@ class Entity {
       damageSustained: 100,
       erosion: 10
     };
+    this.lastDamageTaken = 0;
   }
 
   /**
@@ -122,7 +127,7 @@ class Entity {
   reset() {
     this.pos = this.initialPos;
     this.states = this.initialStates;
-    this.component?.show();
+    this.component.current?.show();
     this.health.current = this.health.initial.current;
     this.health.max = this.health.initial.max;
     this.health.shield = this.health.initial.shield;
@@ -290,7 +295,7 @@ class Entity {
       }
       str += this.triggers[i].spellId + "|";
       str += this.triggers[i].spellLevel + "|";
-      str += Game.getEntityIndex(this.triggers[i].caster?.uuid) + "|";
+      str += Game.getEntityIndex(this.triggers[i].caster?.uuid || "-1") + "|";
     }
     str += this.health.initial.shield + "|";
     str += this.health.initial.max + "|";
@@ -350,41 +355,41 @@ class Entity {
    */
   static unserializeV2(splits: Array<string>): Entity {
     const _pos: Coordinates = {
-      x: parseInt(splits.shift()),
-      y: parseInt(splits.shift())
+      x: parseInt(splits.shift() || "0"),
+      y: parseInt(splits.shift() || "0")
     };
-    const _team: Team = parseInt(splits.shift());
-    const _type: EntityType = parseInt(splits.shift());
-    const _states: State = parseInt(splits.shift());
-    const _triggersLength: number = parseInt(splits.shift());
+    const _team: Team = parseInt(splits.shift() || "0");
+    const _type: EntityType = parseInt(splits.shift() || "0");
+    const _states: State = parseInt(splits.shift() || "0");
+    const _triggersLength: number = parseInt(splits.shift() || "0");
     const _triggers: Array<SpellTrigger> = [];
     for (let i: number = 0; i < _triggersLength; i++) {
-      const _triggersTriggersLength: number = parseInt(splits.shift());
+      const _triggersTriggersLength: number = parseInt(splits.shift() || "0");
       const _triggersTriggers: Array<TriggerType> = [];
       for (let j: number = 0; j < _triggersTriggersLength; j++) {
-        _triggersTriggers.push(parseInt(splits.shift()));
+        _triggersTriggers.push(parseInt(splits.shift() || "0"));
       }
       _triggers.push({
         triggers: _triggersTriggers,
-        spellId: parseInt(splits.shift()),
-        spellLevel: parseInt(splits.shift()),
-        caster: undefined,
+        spellId: parseInt(splits.shift() || "0"),
+        spellLevel: parseInt(splits.shift() || "0"),
+        caster: null,
         _casterId: splits.shift()
       });
     }
-    const _shield: number = parseInt(splits.shift());
-    const _hpMax: number = parseInt(splits.shift());
-    const _hp: number = parseInt(splits.shift());
-    const _level: number = parseInt(splits.shift());
-    const _buffsLength: number = parseInt(splits.shift());
+    const _shield: number = parseInt(splits.shift() || "0");
+    const _hpMax: number = parseInt(splits.shift() || "0");
+    const _hp: number = parseInt(splits.shift() || "0");
+    const _level: number = parseInt(splits.shift() || "0");
+    const _buffsLength: number = parseInt(splits.shift() || "0");
     const _buffs: Array<Buff> = [];
     for (let i = 0; i < _buffsLength; i++) {
-      const _buffSpell: number = parseInt(splits.shift());
-      const _buffType: BuffType = parseInt(splits.shift());
-      const _buffsParamsLength: number = parseInt(splits.shift());
+      const _buffSpell: number = parseInt(splits.shift() || "0");
+      const _buffType: BuffType = parseInt(splits.shift() || "0");
+      const _buffsParamsLength: number = parseInt(splits.shift() || "0");
       const _buffsParams: Array<number> = [];
       for (let j = 0; j < _buffsParamsLength; j++) {
-        _buffsParams.push(parseInt(splits.shift()));
+        _buffsParams.push(parseInt(splits.shift() || "0"));
       }
       _buffs.push({
         spell: _buffSpell,
@@ -393,43 +398,43 @@ class Entity {
       });
     }
     const _offensiveStats: OffensiveStats = {
-      vitality: parseInt(splits.shift()),
-      strength: parseInt(splits.shift()),
-      chance: parseInt(splits.shift()),
-      intelligence: parseInt(splits.shift()),
-      agility: parseInt(splits.shift()),
-      power: parseInt(splits.shift()),
-      powerTrap: parseInt(splits.shift()),
-      damage: parseInt(splits.shift()),
-      damageEarth: parseInt(splits.shift()),
-      damageWater: parseInt(splits.shift()),
-      damageFire: parseInt(splits.shift()),
-      damageAir: parseInt(splits.shift()),
-      damageNeutral: parseInt(splits.shift()),
-      damagePush: parseInt(splits.shift()),
-      damageTrap: parseInt(splits.shift()),
-      damageRanged: parseInt(splits.shift()),
-      damageMelee: parseInt(splits.shift()),
-      damageSpell: parseInt(splits.shift()),
-      damageFinal: parseInt(splits.shift())
+      vitality: parseInt(splits.shift() || "0"),
+      strength: parseInt(splits.shift() || "0"),
+      chance: parseInt(splits.shift() || "0"),
+      intelligence: parseInt(splits.shift() || "0"),
+      agility: parseInt(splits.shift() || "0"),
+      power: parseInt(splits.shift() || "0"),
+      powerTrap: parseInt(splits.shift() || "0"),
+      damage: parseInt(splits.shift() || "0"),
+      damageEarth: parseInt(splits.shift() || "0"),
+      damageWater: parseInt(splits.shift() || "0"),
+      damageFire: parseInt(splits.shift() || "0"),
+      damageAir: parseInt(splits.shift() || "0"),
+      damageNeutral: parseInt(splits.shift() || "0"),
+      damagePush: parseInt(splits.shift() || "0"),
+      damageTrap: parseInt(splits.shift() || "0"),
+      damageRanged: parseInt(splits.shift() || "0"),
+      damageMelee: parseInt(splits.shift() || "0"),
+      damageSpell: parseInt(splits.shift() || "0"),
+      damageFinal: parseInt(splits.shift() || "0")
     };
     const _defensiveStats: DefensiveStats = {
-      neutral: parseInt(splits.shift()),
-      earth: parseInt(splits.shift()),
-      water: parseInt(splits.shift()),
-      fire: parseInt(splits.shift()),
-      air: parseInt(splits.shift()),
-      resistanceEarth: parseInt(splits.shift()),
-      resistanceWater: parseInt(splits.shift()),
-      resistanceFire: parseInt(splits.shift()),
-      resistanceAir: parseInt(splits.shift()),
-      resistanceNeutral: parseInt(splits.shift()),
-      resistancePush: parseInt(splits.shift()),
-      resistanceRanged: parseInt(splits.shift()),
-      resistanceMelee: parseInt(splits.shift()),
-      resistanceSpell: parseInt(splits.shift()),
-      damageSustained: parseInt(splits.shift()),
-      erosion: parseInt(splits.shift())
+      neutral: parseInt(splits.shift() || "0"),
+      earth: parseInt(splits.shift() || "0"),
+      water: parseInt(splits.shift() || "0"),
+      fire: parseInt(splits.shift() || "0"),
+      air: parseInt(splits.shift() || "0"),
+      resistanceEarth: parseInt(splits.shift() || "0"),
+      resistanceWater: parseInt(splits.shift() || "0"),
+      resistanceFire: parseInt(splits.shift() || "0"),
+      resistanceAir: parseInt(splits.shift() || "0"),
+      resistanceNeutral: parseInt(splits.shift() || "0"),
+      resistancePush: parseInt(splits.shift() || "0"),
+      resistanceRanged: parseInt(splits.shift() || "0"),
+      resistanceMelee: parseInt(splits.shift() || "0"),
+      resistanceSpell: parseInt(splits.shift() || "0"),
+      damageSustained: parseInt(splits.shift() || "0"),
+      erosion: parseInt(splits.shift() || "0")
     }
 
     const _entity = new Entity(_pos, _team, _type);
@@ -472,7 +477,7 @@ class Entity {
       }
       str += this.triggers[i].spellId + "|";
       str += this.triggers[i].spellLevel + "|";
-      str += this.triggers[i].caster.uuid + "|";
+      str += (this.triggers[i].caster?.uuid || "null") + "|";
     }
     str += this.initialStates + "|";
     return str + ">";
@@ -506,7 +511,7 @@ class Entity {
         triggers: _trtr,
         spellId: parseInt(parts[n++]),
         spellLevel: parseInt(parts[n++]),
-        caster: undefined,
+        caster: null,
         _casterId: parts[n++]
       });
     }

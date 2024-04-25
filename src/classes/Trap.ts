@@ -2,10 +2,11 @@ import { Area, Color, Coordinates } from "@src/enums";
 import TrapCell from "@classes/TrapCell";
 import { getBorders, getCellsInArea, isInArea } from "@src/utils/mapUtils";
 import { v4 as uuidv4 } from "uuid";
-import TrapComponent from "@components/TrapComponent";
+import TrapComponent, { TrapComponentRef } from "@components/TrapComponent";
 import SpellData from "@json/Spells";
 import { colorToInt, intToColor } from "@src/utils/utils";
 import Game from "./Game";
+import { createRef } from "react";
 
 class Trap {
   uuid: string;
@@ -15,8 +16,8 @@ class Trap {
   area: Area;
   casterUuid: string;
   color: Color;
-  component: TrapComponent;
-  imgComponent: SVGImageElement;
+  component: React.RefObject<TrapComponentRef>
+  imgComponent: React.RefObject<SVGImageElement>;
   active: boolean;
 
   constructor(pos: Coordinates, casterUuid: string, spellId: number, spellLevel: number, area: Area, value: number) {
@@ -27,7 +28,8 @@ class Trap {
     this.spellId = spellId;
     this.spellLevel = spellLevel;
     this.color = intToColor(value);
-    this.component = undefined;
+    this.component = createRef();
+    this.imgComponent = createRef();
     this.active = true;
   }
 
@@ -58,16 +60,16 @@ class Trap {
 
   enable() {
     this.active = true;
-    this.component?.show();
+    this.component?.current?.show();
   }
 
   disable() {
     this.active = false;
-    this.component?.hide();
+    this.component?.current?.hide();
   }
 
   getSpellIcon(): string {
-    return SpellData[this.spellId].icon;
+    return SpellData[this.spellId].icon || "NOICON";
   }
 
   /**
@@ -92,14 +94,14 @@ class Trap {
    * @param {Array<string>} splits The next parts of the unserialization
    */
   static unserializeV2(splits: Array<string>): { trap: Trap, caster: number } {
-    const _pos: Coordinates = { x: parseInt(splits.shift()), y: parseInt(splits.shift()) };
-    const _spellId: number = parseInt(splits.shift());
-    const _spellLevel: number = parseInt(splits.shift());
-    const _area: Area = { min: parseInt(splits.shift()), max: parseInt(splits.shift()), type: parseInt(splits.shift()) };
-    const _casterId: number = parseInt(splits.shift());
-    const _value: number = parseInt(splits.shift());
+    const _pos: Coordinates = { x: parseInt(splits.shift() || "0"), y: parseInt(splits.shift() || "0") };
+    const _spellId: number = parseInt(splits.shift() || "0");
+    const _spellLevel: number = parseInt(splits.shift() || "0");
+    const _area: Area = { min: parseInt(splits.shift() || "0"), max: parseInt(splits.shift() || "0"), type: parseInt(splits.shift() || "0") };
+    const _casterId: number = parseInt(splits.shift() || "0");
+    const _value: number = parseInt(splits.shift() || "0");
 
-    const _trap = new Trap(_pos, undefined, _spellId, _spellLevel, _area, _value);
+    const _trap = new Trap(_pos, "NULL", _spellId, _spellLevel, _area, _value);
     return {
       trap: _trap,
       caster: _casterId

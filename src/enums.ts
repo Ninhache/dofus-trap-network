@@ -1,4 +1,5 @@
 import Entity from "@classes/Entity";
+import { Nullable } from "./@types/NullableType";
 
 export enum CellType {
   Ground,
@@ -296,7 +297,7 @@ export interface SpellTrigger {
   triggers: Array<TriggerType>;
   spellId: number;
   spellLevel: number;
-  caster: Entity;
+  caster: Nullable<Entity>;
   _casterId?: string;
 }
 

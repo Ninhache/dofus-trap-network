@@ -7,30 +7,32 @@ import { Area, AreaType, CellBorders, CellType, Coordinates, Direction, EffectTy
 import { clockwise, isInArea, moveInDirection } from "@src/utils/mapUtils";
 import TrapCell from "@classes/TrapCell";
 import { randomInt } from "@src/utils/utils";
-import MapComponent from "@components/MapComponent";
-import HistoryComponent from "@components/HistoryComponent";
+import MapComponent, { MapComponentRef } from "@components/MapComponent";
+import HistoryComponent, { HistoryComponentRef } from "@components/HistoryComponent";
 import { Effect, Spell, SpellLevel } from "@src/@types/SpellDataType";
-import SpellsComponent from "@components/SpellsComponent";
+import SpellsComponent, { SpellsComponentRef } from "@components/SpellsComponent";
 import SpellData from "@json/Spells";
-import StatsComponent from "@components/StatsComponent";
+import StatsComponent, { StatsComponentRef } from "@components/StatsComponent";
 import zlib from "react-zlib-js";
 import { Buffer } from 'buffer';
+import { Nullable } from "@src/@types/NullableType";
+import { createRef } from "react";
 
 class Game {
   map: Array<Array<Cell>>;
   mapName: string;
   mapLoaded: boolean;
-  mapComponent: MapComponent;
-  historyComponent: HistoryComponent;
-  spellsComponent: SpellsComponent;
-  statsComponent: StatsComponent;
+  mapComponent: React.RefObject<MapComponentRef>;
+  historyComponent: React.RefObject<HistoryComponentRef>;
+  spellsComponent: React.RefObject<SpellsComponentRef>;
+  statsComponent: React.RefObject<StatsComponentRef>;
   preparingEffects: Array<EffectType>;
   mainCharacter: Entity;
-  movingEntity: Entity;
+  movingEntity: Nullable<Entity>;
 
   entities: Array<Entity>;
   traps: Array<Trap>;
-  startPoint: Coordinates;
+  startPoint: Nullable<Coordinates>;
   savedActionStack: Array<Action>;
 
   width: number;
@@ -38,17 +40,18 @@ class Game {
 
   actionStack: Array<Action>;
   completedActionStack: Array<Action>;
-  currentAction: Action;
+  currentAction: Nullable<Action>;
 
-  actionGenerator: Generator<Entity>;
+  actionGenerator: Nullable<Generator<Entity>>;
   waitingAnim: boolean;
   remainingSteps: number;
   isRunning: boolean;
 
-  selectedSpell: Spell;
+  selectedSpell: Nullable<Spell>;
   options: GameOptions;
 
   constructor(mapName: string) {
+    this.map = []
     this.width = Consts.mapWidth;
     this.height = Consts.mapHeight;
     this.entities = [];
@@ -56,14 +59,19 @@ class Game {
     this.actionStack = [];
     this.completedActionStack = [];
     this.savedActionStack = [];
-    this.currentAction = undefined;
-    this.mapName = undefined;
+    this.currentAction = null;
+    this.mapName = "null";
     this.mapLoaded = false;
+    this.actionGenerator = null;
     this.waitingAnim = false;
-    this.mapComponent = undefined;
-    this.startPoint = undefined;
+    this.mapComponent = createRef();
+    this.historyComponent = createRef();
+    this.spellsComponent = createRef();
+    this.statsComponent = createRef();
+    this.startPoint = null;
     this.remainingSteps = -1;
     this.isRunning = false;
+    this.selectedSpell = null;
     this.preparingEffects = [
       EffectType.PlaceTrap,
       EffectType.CreateEntity,
@@ -73,6 +81,7 @@ class Game {
       EffectType.Toggle,
     ];
     this.mainCharacter = new Entity({ x: 0, y: 0 }, Team.Attacker, EntityType.Player);
+    this.movingEntity = null;
     this.options = {
       leukide: false,
       order: false,
@@ -95,7 +104,7 @@ class Game {
    */
   run() {
     if (!this.startPoint) {
-      this.spellsComponent.setPlay(false);
+      this.spellsComponent.current?.setPlay(false);
       return;
     }
 
@@ -111,7 +120,7 @@ class Game {
    */
   runOne() {
     if (!this.startPoint) {
-      this.spellsComponent.setPlay(false);
+      this.spellsComponent.current?.setPlay(false);
       return;
     }
 
@@ -148,7 +157,7 @@ class Game {
     this.savedActionStack = this.completedActionStack;
     this.completedActionStack = [];
     this.actionStack = [];
-    this.currentAction = undefined;
+    this.currentAction = null;
     this.waitingAnim = false;
     this.isRunning = false;
 
@@ -160,21 +169,21 @@ class Game {
    * Forces the map component to update its values and children.
    */
   refreshMap() {
-    this.mapComponent?.forceUpdate();
+    this.mapComponent.current?.forceUpdate();
   }
 
   /**
    * Forces the history component to update its values and children.
    */
   refreshHistory() {
-    this.historyComponent?.forceUpdate();
+    this.historyComponent.current?.forceUpdate();
   }
 
   /**
    * Forces the map component to update its values and children.
    */
   refreshStats() {
-    this.statsComponent?.forceUpdate();
+    this.statsComponent.current?.forceUpdate();
   }
 
   /**
@@ -232,23 +241,28 @@ class Game {
    * @returns {CellBorders} The borders at the given coordinates
    */
   getCellBorders(pos: Coordinates): CellBorders {
-    let borders: CellBorders = 0;
-    const dirToBorder = {
+    let borders: CellBorders = CellBorders.None;
+    const dirToBorder: Partial<Record<Direction, CellBorders>> = {
       [Direction.North]: CellBorders.North,
       [Direction.East]: CellBorders.East,
       [Direction.South]: CellBorders.South,
       [Direction.West]: CellBorders.West
-    }
+    };
 
     for (const dir of [Direction.North, Direction.East, Direction.South, Direction.West]) {
       const moved: Coordinates = moveInDirection(pos, dir, 1);
-      if (this.map?.[moved.x]?.[moved.y] === undefined || this.map[moved.x][moved.y].type !== CellType.Ground) {
-        borders |= dirToBorder[dir];
+
+      if (moved.x >= 0 && moved.x < this.map.length && moved.y >= 0 && moved.y < this.map[moved.x].length) {
+        if (this.map[moved.x][moved.y].type !== CellType.Ground) {
+          borders |= (dirToBorder[dir] || CellBorders.None);
+        }
       }
     }
 
     return borders;
   }
+
+
 
   /**
    * Load a map into the object's {map} property.
@@ -268,7 +282,7 @@ class Game {
           for (let i = 0; i < map[0].length; i++) {
             this.map[i] = new Array<Cell>(map.length);
             for (let j = 0; j < map.length; j++) {
-              this.map[i][j] = new Cell(map[j][i], { x: i, y: j});
+              this.map[i][j] = new Cell(map[j][i], { x: i, y: j });
             }
           }
           this.refreshMap();
@@ -280,7 +294,7 @@ class Game {
           console.error(error);
         }
       )
-    ;
+      ;
   }
 
   /**
@@ -290,10 +304,10 @@ class Game {
     this.traps = [];
     this.entities = [];
     this.actionStack = [];
-    this.currentAction = undefined;
+    this.currentAction = null;
     this.completedActionStack = [];
     this.savedActionStack = [];
-    this.startPoint = undefined;
+    this.startPoint = null;
     this.waitingAnim = false;
     this.remainingSteps = -1;
     this.mapLoaded = false;
@@ -320,7 +334,7 @@ class Game {
     }
     if (pos.x < 0 || pos.x >= this.map.length || pos.y < 0 || pos.y >= this.map[pos.x].length) {
       throw new Error("Coordinates (" + pos.x + ", " + pos.y + ") are out of bounds.");
-    }  
+    }
     return this.map[pos.x][pos.y];
   }
 
@@ -330,12 +344,12 @@ class Game {
    * @param {Coordinates} pos Coordinates of the cell to check
    * @returns {Entity} The entity, or undefined if there is none
    */
-  getEntity(pos: Coordinates): Entity {
+  getEntity(pos: Coordinates): Nullable<Entity> {
     for (let i: number = 0; i < this.entities.length; i++) {
       if (this.entities[i].pos.x === pos.x && this.entities[i].pos.y === pos.y)
         return this.entities[i];
     }
-    return undefined;
+    return null;
   }
 
   /**
@@ -344,14 +358,14 @@ class Game {
    * @param {string} uuid Uuid of the entity
    * @returns {Entity} The entity, or undefined if there is none
    */
-  getEntityById(uuid: string): Entity {
+  getEntityById(uuid: string): Nullable<Entity> {
     if (this.mainCharacter.uuid === uuid) return this.mainCharacter;
 
     for (let i: number = 0; i < this.entities.length; i++) {
       if (this.entities[i].uuid === uuid)
         return this.entities[i];
     }
-    return undefined;
+    return null;
   }
 
   /**
@@ -360,12 +374,12 @@ class Game {
    * @param {Coordinates} pos Coordinates of the cell to check
    * @returns {Trap} The trap, or undefined if there is none
    */
-  getTrap(pos: Coordinates): Trap {
+  getTrap(pos: Coordinates): Nullable<Trap> {
     for (let i: number = 0; i < this.traps.length; i++) {
       if (this.traps[i].pos.x === pos.x && this.traps[i].pos.y === pos.y)
         return this.traps[i];
     }
-    return undefined;
+    return null;
   }
 
   /**
@@ -415,9 +429,10 @@ class Game {
     for (let i: number = 0; i < maxCells; i++) {
       const clockPos: Coordinates = clock.next().value;
       if (isInArea(clockPos, area, pos)) {
-        const entity: Entity = this.getEntity(clockPos);
-        if (entity)
+        const entity: Nullable<Entity> = this.getEntity(clockPos);
+        if (entity) {
           entities.push(entity);
+        }
       }
     }
     return entities;
@@ -451,7 +466,7 @@ class Game {
    * @param {Entity} caster Caster entity
    * @param {Trap} originTrap Trap triggering the effect
    */
-  executeSpell(spell: SpellLevel, pos: Coordinates, caster: Entity, originTrap: Trap) {
+  executeSpell(spell: SpellLevel, pos: Coordinates, caster: Nullable<Entity>, originTrap: Trap) {
     const localStack: Array<Action> = [];
     const effects = spell.effects;
     for (let i: number = 0; i < effects.length; i++) {
@@ -485,24 +500,38 @@ class Game {
    * This function uses this.remainingSteps = number of actions to trigger. -1 = no limit
    */
   triggerStack() {
-    while (this.waitingAnim || (this.remainingSteps-- !== 0 && (this.currentAction = this.actionStack.pop()))) {
+    while (this.waitingAnim || (this.remainingSteps-- !== 0 && (this.currentAction = (this.actionStack.pop() || null)))) {
       this.refreshHistory();
       this.refreshStats();
-      if (!this.waitingAnim) {
+      if (!this.waitingAnim && this.currentAction) {
         this.actionGenerator = this.currentAction.apply();
       }
+
+      if (!this.actionGenerator) {
+        console.warn(`TriggerStack doesnt have a valid triggerStack`);
+        return;
+      }
+
       const next = this.actionGenerator.next();
       if (!next.done && next.value) {
         this.waitingAnim = true;
-        next.value.component.move(next.value.pos, next.value.animPos);
+        const entity: Nullable<Entity> = next.value;
+        const entityComponent = entity.component.current;
+        if (entityComponent) {
+          if (entity.pos && entity.animPos) {
+            entity.component.current?.move(entity.pos, entity.animPos);
+          }
+        }
         return;
       } else {
-        this.completedActionStack.push(this.currentAction);
-        this.currentAction = undefined;
+        if (this.currentAction !== null) {
+          this.completedActionStack.push(this.currentAction);
+        }
+        this.currentAction = null;
         this.waitingAnim = false;
       }
     }
-    this.spellsComponent.setPlay(false);
+    this.spellsComponent.current?.setPlay(false);
     this.refreshMap();
   }
 
@@ -518,16 +547,24 @@ class Game {
   isMovementPossible(fromPos: Coordinates, toPos: Coordinates, dir: Direction): boolean {
     const diagonal: boolean = [Direction.Northeast, Direction.Southeast, Direction.Southwest, Direction.Northwest].includes(dir);
     if (diagonal) {
-      const splitDir = {
+      const splitDir: Partial<Record<Direction, [Direction, Direction]>> = {
         [Direction.Northeast]: [Direction.North, Direction.East],
         [Direction.Northwest]: [Direction.North, Direction.West],
         [Direction.Southwest]: [Direction.South, Direction.West],
         [Direction.Southeast]: [Direction.South, Direction.East]
       };
-      if (!this.isMovementPossible(fromPos, moveInDirection(fromPos, splitDir[dir][0], 1), splitDir[dir][0])
-       || !this.isMovementPossible(fromPos, moveInDirection(fromPos, splitDir[dir][1], 1), splitDir[dir][1])) {
+
+      const componentDirections = splitDir[dir];
+      if (!componentDirections) {
         return false;
       }
+
+
+      if (!this.isMovementPossible(fromPos, moveInDirection(fromPos, componentDirections[0], 1), componentDirections[0])
+        || !this.isMovementPossible(fromPos, moveInDirection(fromPos, componentDirections[1], 1), componentDirections[1])) {
+        return false;
+      }
+
     }
     return this.getCell(toPos)?.type === CellType.Ground && this.getEntity(toPos) === undefined;
   }
@@ -537,12 +574,12 @@ class Game {
    * 
    * @returns Object containing all actions: completed, current and waiting
    */
-  getActionStack(): { waiting: Array<Action>, completed: Array<Action>, current: Action } {
+  getActionStack(): { waiting: Array<Action>, completed: Array<Action>, current: Nullable<Action> } {
     if (this.savedActionStack.length > 0) {
       return {
         waiting: [],
         completed: this.savedActionStack,
-        current: undefined
+        current: null
       };
     }
     return {
@@ -561,21 +598,21 @@ class Game {
   getActionsFromTrap(trap: Trap): Array<Action> {
     const actions: Array<Action> = [];
     for (let i: number = 0; i < this.savedActionStack.length; i++) {
-      if (this.savedActionStack[i].originTrap.uuid === trap.uuid) {
+      if (this.savedActionStack[i].originTrap?.uuid === trap.uuid) {
         actions.push(this.savedActionStack[i]);
       }
     }
     for (let i: number = 0; i < this.actionStack.length; i++) {
-      if (this.actionStack[i].originTrap.uuid === trap.uuid) {
+      if (this.actionStack[i].originTrap?.uuid === trap.uuid) {
         actions.push(this.actionStack[i]);
       }
     }
     for (let i: number = 0; i < this.completedActionStack.length; i++) {
-      if (this.completedActionStack[i].originTrap.uuid === trap.uuid) {
+      if (this.completedActionStack[i].originTrap?.uuid === trap.uuid) {
         actions.push(this.completedActionStack[i]);
       }
     }
-    if (this.currentAction?.originTrap.uuid === trap.uuid) {
+    if (this.currentAction?.originTrap?.uuid === trap.uuid) {
       actions.push(this.currentAction);
     }
     return actions;
@@ -593,9 +630,17 @@ class Game {
    * 
    * @param {Spell} spell Spell to select
    */
-  selectSpell(spell: Spell) {
-    this.selectedSpell = spell;
-    this.mapComponent.setMouseIcon(spell?.icon);
+  selectSpell(spell: Nullable<Spell>) {
+    if (!spell) {
+      this.selectedSpell = null;
+    } else {
+      this.selectedSpell = spell;
+  
+      if (spell.icon === null) {
+        throw new Error(`SPELL {${spell.name}} IS MISSING AN ICON !`);
+      }
+      this.mapComponent.current?.setMouseIcon(spell.icon);
+    }
   }
 
   /**
@@ -617,7 +662,8 @@ class Game {
       if (!this.entities.includes(this.movingEntity)) {
         this.entities.push(this.movingEntity);
       }
-      this.statsComponent.closeConfig();
+
+      this.statsComponent.current?.closeConfig();
       this.movingEntity = null;
       this.refreshMap();
       return;
@@ -643,11 +689,18 @@ class Game {
     for (let i: number = 0; i < effects.length; i++) {
       if (!this.preparingEffects.includes(effects[i].effectType)) continue;
 
-      const action = new Action(this.mainCharacter, this.getEntity(pos), this.mainCharacter.pos, pos, effects[i].effectType, +entityPriority, effects[i], null, null, effects[i].targetMask);
-      const gen = action.apply(false);
-      const ret = gen.next();
-      if (!ret.done) {
+      const entity: Nullable<Entity> = this.getEntity(pos);
+
+      if (!entity) {
         console.error('Preparing effect is yielding but should not.');
+      } else {
+        const action = new Action(this.mainCharacter, entity, this.mainCharacter.pos, pos, effects[i].effectType, +entityPriority, effects[i], null, null, effects[i].targetMask);
+        const gen = action.apply(false);
+        const ret = gen.next();
+  
+        if (!ret.done) {
+          console.error('Preparing effect is yielding but should not.');
+        }
       }
     }
   }
@@ -711,7 +764,7 @@ class Game {
   selectEntity(pos: Coordinates) {
     const entity = this.getEntity(pos);
     if (entity)
-      this.statsComponent.openConfig(entity);
+      this.statsComponent.current?.openConfig(entity);
   }
 
   /**
@@ -722,7 +775,7 @@ class Game {
   selectTrap(pos: Coordinates) {
     const trap = this.getTrap(pos);
     if (trap)
-    this.statsComponent.openConfig(trap);
+      this.statsComponent.current?.openConfig(trap);
   }
 
   /**
@@ -730,7 +783,7 @@ class Game {
    * 
    * @param {Entity} entity Entity to move
    */
-  setMovingEntity(entity: Entity) {
+  setMovingEntity(entity: Nullable<Entity>) {
     if (this.isRunning) return;
 
     this.movingEntity = entity;
@@ -758,17 +811,16 @@ class Game {
    * @param {number} version Version to use for serialization (last version by default).
    * @returns {string} Serialized string 
    */
-  serialize(version?: number): string {
-    const funcs = {
+  public serialize(version: 1 | 2 = 2): string {
+    const funcs: { [key: number]: () => string } = {
       1: this.serializeV1.bind(this),
       2: this.serializeV2.bind(this),
-      default: 2
     };
-    if (!(version in funcs)) {
-      version = funcs.default;
-    }
-    return version + "|" + funcs[version]();
+
+    // No need to check if version is in funcs because TypeScript enforces it
+    return `${version}|${funcs[version]()}`;
   }
+
 
   /**
    * Loads all data from a serialized object.
@@ -778,21 +830,30 @@ class Game {
    * @param {string} str The serialized object 
    * @returns {boolean} `true` if the loading is successful
    */
-  unserialize(str: string): boolean {
-    const funcs = {
+  public unserialize(str: string): boolean {
+    const separator = str.indexOf('|');
+    if (separator === -1) {
+      console.error('Invalid format: no separator found.');
+      return false;
+    }
+
+    const versionStr = str.slice(0, separator);
+    const data = str.slice(separator + 1);
+    const version = parseInt(versionStr) as 1 | 2; // Cast the version as either 1 or 2
+
+    const funcs: { [key in 1 | 2]: (data: string) => boolean } = {
       1: this.unserializeV1.bind(this),
       2: this.unserializeV2.bind(this),
-      default: 2
     };
-    const separator = str.indexOf('|');
-    const splits = [str.slice(0, separator), str.slice(separator + 1)];
-    let version: number = parseInt(splits[0]);
-    if (!(version in funcs)) {
-      version = funcs.default;
-    }
-    return funcs[version](splits[1]);
-  }
 
+    if (!(version in funcs)) {
+      console.error(`Unsupported version: ${version}`);
+      return false;
+    }
+
+    return funcs[version](data);
+  }
+  
   /**
    * Returns a string representing the game object.
    * @returns {string} Serialized string
@@ -811,7 +872,7 @@ class Game {
     }
     str += (this.startPoint?.x ?? "-") + "|" + (this.startPoint?.y ?? "-") + "|";
     str += +this.options.leukide;
-    
+
     str = zlib.deflateSync(str).toString("base64");
     return str;
   }
@@ -827,9 +888,9 @@ class Game {
       const rawData: string = zlib.inflateSync(Buffer.from(str, "base64")).toString("ascii");
       const splits: Array<string> = rawData.split("|");
 
-      const _mapName: string = splits.shift();
+      const _mapName: string = splits.shift() || "NULL";
       let _mainCharacter: Entity = Entity.unserializeV2(splits);
-      const _entitiesLength: number = parseInt(splits.shift());
+      const _entitiesLength: number = parseInt(splits.shift() || "0");
       const _entities: Array<Entity> = [];
       for (let i: number = 0; i < _entitiesLength; i++) {
         _entities.push(Entity.unserializeV2(splits));
@@ -837,7 +898,7 @@ class Game {
           _mainCharacter = _entities[i];
         }
       }
-      const _trapsLength: number = parseInt(splits.shift());
+      const _trapsLength: number = parseInt(splits.shift() || "0") ;
       const _traps: Array<Trap> = [];
       for (let i: number = 0; i < _trapsLength; i++) {
         const _trap: { trap: Trap, caster: number } = Trap.unserializeV2(splits);
@@ -845,17 +906,17 @@ class Game {
         _traps.push(_trap.trap);
       }
       const _startPoint: Coordinates = {
-        x: parseInt(splits.shift()),
-        y: parseInt(splits.shift())
+        x: parseInt(splits.shift() || "0"),
+        y: parseInt(splits.shift() || "0")
       };
       const _options: GameOptions = {
-        leukide: !!parseInt(splits.shift()),
+        leukide: !!parseInt(splits.shift() || "0"),
         order: false
       };
 
       for (let i: number = 0; i < _entities.length; i++) {
         for (let j: number = 0; j < _entities[i].triggers.length; j++) {
-          const _casterId: number = parseInt(_entities[i].triggers[j]._casterId);
+          const _casterId: number = parseInt(_entities[i].triggers[j]._casterId || "0");
           _entities[i].triggers[j].caster = (_casterId === -1) ? _mainCharacter : _entities[_casterId];
         }
       }
@@ -874,7 +935,7 @@ class Game {
       this.mainCharacter = _mainCharacter;
       this.entities = _entities;
       this.traps = _traps;
-      this.startPoint = (isNaN(_startPoint.x) || isNaN(_startPoint.y)) ? undefined : _startPoint;
+      this.startPoint = (isNaN(_startPoint.x) || isNaN(_startPoint.y)) ? null : _startPoint;
       this.options = _options;
       this.loadMap(_mapName, false);
       return true;
@@ -949,8 +1010,10 @@ class Game {
       for (let i: number = 0; i < _trapsLength; i++) {
         _traps.push(Trap.unserializeV1(groups[parseInt(dataParts[n++])]));
       }
-      let _startPoint: Coordinates = { x: parseInt(dataParts[n++]), y: parseInt(dataParts[n++]) };
-      if (isNaN(_startPoint.x)) _startPoint = undefined;
+      let _startPoint: Nullable<Coordinates> = { x: parseInt(dataParts[n++]), y: parseInt(dataParts[n++]) };
+      if (isNaN(_startPoint.x)) {
+        _startPoint = null;
+      }
       const _leukide: boolean = dataParts[n++] === "1";
 
       this.prepareNewMap();
@@ -977,7 +1040,7 @@ class Game {
       console.error(e);
       return false;
     }
-    
+
     return true;
   }
 }
