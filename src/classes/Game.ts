@@ -329,9 +329,6 @@ class Game {
    * @throws {Error} If the Coordinates are out of bounds
    */
   getCell(pos: Coordinates): Cell {
-    if (!this.map) {
-      throw new Error("Map data is not initialized.");
-    }
     if (pos.x < 0 || pos.x >= this.map.length || pos.y < 0 || pos.y >= this.map[pos.x].length) {
       throw new Error("Coordinates (" + pos.x + ", " + pos.y + ") are out of bounds.");
     }
