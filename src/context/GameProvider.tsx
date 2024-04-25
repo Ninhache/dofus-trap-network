@@ -1,15 +1,14 @@
+import { HistoryComponentRef } from '@components/HistoryComponent';
+import { MapComponentRef } from '@components/MapComponent';
+import { SpellsComponentRef } from '@components/SpellsComponent';
+import { StatsComponentRef } from '@components/StatsComponent';
 import React, { createContext, useContext, useRef, ReactNode } from 'react';
 
-interface MapProps {
-  cellNum: number;
-  rowNum: number;
-}
-
 interface GameContextValue {
-  statsComponent: React.RefObject<HTMLDivElement>;
-  mapComponent: React.RefObject<HTMLDivElement>;
-  historyComponent: React.RefObject<HTMLDivElement>;
-  spellsComponent: React.RefObject<HTMLDivElement>;
+  statsComponent: React.RefObject<StatsComponentRef>;
+  mapComponent: React.RefObject<MapComponentRef>;
+  historyComponent: React.RefObject<HistoryComponentRef>;
+  spellsComponent: React.RefObject<SpellsComponentRef>;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -23,8 +22,8 @@ export const useGame = (): GameContextValue => {
 };
 
 export const GameProvider: React.FC<{children: ReactNode}> = ({ children }) => {
-  const statsComponentRef = useRef<HTMLDivElement>(null);
-  const mapComponentRef = useRef<HTMLDivElement>(null);
+  const statsComponentRef = useRef<SpellsComponentRef>(null);
+  const mapComponentRef = useRef<MapComponentRef>(null);
   const historyComponentRef = useRef<HTMLDivElement>(null);
   const spellsComponentRef = useRef<HTMLDivElement>(null);
 
