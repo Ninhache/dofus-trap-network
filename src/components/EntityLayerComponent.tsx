@@ -24,7 +24,7 @@ const EntityLayerComponent: React.FC<Props> = ({ entitiesProps, startPoint }) =>
       entities.push(<CellComponent
         x={entity.pos.x}
         y={entity.pos.y}
-        id={entity.pos.y * Game.width + entity.pos.x}
+        // id={entity.pos.y * Game.width + entity.pos.x}
         width={cellWidth}
         height={cellHeight}
         key={entity.uuid}

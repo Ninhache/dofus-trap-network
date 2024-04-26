@@ -4,12 +4,13 @@ import * as React from "react";
 type Props = {
   x: number;
   y: number;
-
+  // id: number;
   center: boolean;
   width: number;
   height: number;
   type: string;
   borders: CellBorders;
+  // setHighlight={(highlight: boolean) => void}
 };
 
 

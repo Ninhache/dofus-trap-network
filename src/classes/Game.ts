@@ -1,22 +1,22 @@
+import Action from "@classes/Action";
 import Cell from "@classes/Cell";
 import Entity from "@classes/Entity";
 import Trap from "@classes/Trap";
-import Action from "@classes/Action";
-import Consts from "@json/Consts.json";
-import { Area, AreaType, CellBorders, CellType, Coordinates, Direction, EffectType, EntityType, GameOptions, SpellType, Team, TriggerType } from "@src/enums";
-import { clockwise, isInArea, moveInDirection } from "@src/utils/mapUtils";
 import TrapCell from "@classes/TrapCell";
-import { randomInt } from "@src/utils/utils";
-import MapComponent, { MapComponentRef } from "@components/MapComponent";
-import HistoryComponent, { HistoryComponentRef } from "@components/HistoryComponent";
-import { Effect, Spell, SpellLevel } from "@src/@types/SpellDataType";
-import SpellsComponent, { SpellsComponentRef } from "@components/SpellsComponent";
+import { HistoryComponentRef } from "@components/HistoryComponent";
+import { MapComponentRef } from "@components/MapComponent";
+import { SpellsComponentRef } from "@components/SpellsComponent";
+import { StatsComponentRef } from "@components/StatsComponent";
+import Consts from "@json/Consts.json";
 import SpellData from "@json/Spells";
-import StatsComponent, { StatsComponentRef } from "@components/StatsComponent";
-import zlib from "react-zlib-js";
-import { Buffer } from 'buffer';
 import { Nullable } from "@src/@types/NullableType";
+import { Effect, Spell, SpellLevel } from "@src/@types/SpellDataType";
+import { Area, AreaType, CellBorders, CellType, Coordinates, Direction, EffectType, EntityType, EventValue, GameOptions, SpellType, Team, TriggerType } from "@src/enums";
+import { clockwise, isInArea, moveInDirection } from "@src/utils/mapUtils";
+import { randomInt } from "@src/utils/utils";
+import { Buffer } from 'buffer';
 import { createRef } from "react";
+import zlib from "react-zlib-js";
 
 class Game {
   map: Array<Array<Cell>>;
@@ -169,21 +169,21 @@ class Game {
    * Forces the map component to update its values and children.
    */
   refreshMap() {
-    this.mapComponent.current?.forceUpdate();
+    window.dispatchEvent(new Event(EventValue.forceUpdateMap));
   }
-
+  
   /**
    * Forces the history component to update its values and children.
    */
   refreshHistory() {
-    this.historyComponent.current?.forceUpdate();
+    window.dispatchEvent(new Event(EventValue.forceUpdateHistory));
   }
 
   /**
    * Forces the map component to update its values and children.
    */
   refreshStats() {
-    this.statsComponent.current?.forceUpdate();
+    window.dispatchEvent(new Event(EventValue.forceUpdateStats));
   }
 
   /**
@@ -271,13 +271,17 @@ class Game {
    */
   loadMap(name: string, newMap: boolean = true) {
     const fileURL: string = `./assets/maps/${name}.json`;
+
     fetch(fileURL)
       .then(res => res.json())
       .then(
         (res) => {
-          if (newMap) this.prepareNewMap();
+          if (newMap) {
+            this.prepareNewMap();
+          }
           this.mapName = name;
           const map = res.Data[0].Cells;
+
           this.map = new Array<Array<Cell>>(map[0].length);
           for (let i = 0; i < map[0].length; i++) {
             this.map[i] = new Array<Cell>(map.length);
@@ -285,10 +289,12 @@ class Game {
               this.map[i][j] = new Cell(map[j][i], { x: i, y: j });
             }
           }
+
           this.refreshMap();
           this.refreshHistory();
           this.refreshStats();
           this.mapLoaded = true;
+
         },
         (error) => {
           console.error(error);
@@ -329,10 +335,22 @@ class Game {
    * @throws {Error} If the Coordinates are out of bounds
    */
   getCell(pos: Coordinates): Cell {
-    if (pos.x < 0 || pos.x >= this.map.length || pos.y < 0 || pos.y >= this.map[pos.x].length) {
+
+    if (this.map.length === 0) {
+      console.warn("Map hasn't been initialized yet !");
+    }
+
+    let tmpCell_1: Cell[] | undefined = this.map[pos.x];
+    if (tmpCell_1 === undefined) {
       throw new Error("Coordinates (" + pos.x + ", " + pos.y + ") are out of bounds.");
     }
-    return this.map[pos.x][pos.y];
+
+    let tmpCell_2: Cell | undefined = tmpCell_1[pos.y];
+    if (tmpCell_2 === undefined) {
+      throw new Error("Coordinates (" + pos.x + ", " + pos.y + ") are out of bounds.");
+    }
+
+    return tmpCell_2;
   }
 
   /**
@@ -563,7 +581,7 @@ class Game {
       }
 
     }
-    return this.getCell(toPos)?.type === CellType.Ground && this.getEntity(toPos) === undefined;
+    return this.getCell(toPos)?.type === CellType.Ground && this.getEntity(toPos) === null;
   }
 
   /**
@@ -632,7 +650,7 @@ class Game {
       this.selectedSpell = null;
     } else {
       this.selectedSpell = spell;
-  
+
       if (spell.icon === null) {
         throw new Error(`SPELL {${spell.name}} IS MISSING AN ICON !`);
       }
@@ -647,13 +665,21 @@ class Game {
    * @param {boolean} entityPriority If there are an entity and a trap on the same cell, `entityPriority` defines which one should be used
    */
   onCellClick(pos: Coordinates, entityPriority: boolean) {
-    if (this.map[pos.x][pos.y].type !== CellType.Ground) return;
+    if (this.getCell(pos).type !== CellType.Ground) {
+      return;
+    }
+
     if (this.isRunning) {
-      if (this.selectedSpell !== undefined) return;
+      if (this.selectedSpell !== null) {
+        return;
+      };
       this.pause();
     }
-    if (!this.isRunning && this.movingEntity) {
-      if (this.getEntity(pos)) return;
+
+    if (!this.isRunning && this.movingEntity !== null) {
+      if (this.getEntity(pos) !== null) {
+        return;
+      }
 
       this.movingEntity.setPosition(pos);
       if (!this.entities.includes(this.movingEntity)) {
@@ -688,17 +714,15 @@ class Game {
 
       const entity: Nullable<Entity> = this.getEntity(pos);
 
-      if (!entity) {
+      // @ts-expect-error
+      const action = new Action(this.mainCharacter, entity, this.mainCharacter.pos, pos, effects[i].effectType, +entityPriority, effects[i], null, null, effects[i].targetMask);
+      const gen = action.apply(false);
+      const ret = gen.next();
+
+      if (!ret.done) {
         console.error('Preparing effect is yielding but should not.');
-      } else {
-        const action = new Action(this.mainCharacter, entity, this.mainCharacter.pos, pos, effects[i].effectType, +entityPriority, effects[i], null, null, effects[i].targetMask);
-        const gen = action.apply(false);
-        const ret = gen.next();
-  
-        if (!ret.done) {
-          console.error('Preparing effect is yielding but should not.');
-        }
       }
+
     }
   }
 
@@ -850,7 +874,7 @@ class Game {
 
     return funcs[version](data);
   }
-  
+
   /**
    * Returns a string representing the game object.
    * @returns {string} Serialized string
@@ -895,7 +919,7 @@ class Game {
           _mainCharacter = _entities[i];
         }
       }
-      const _trapsLength: number = parseInt(splits.shift() || "0") ;
+      const _trapsLength: number = parseInt(splits.shift() || "0");
       const _traps: Array<Trap> = [];
       for (let i: number = 0; i < _trapsLength; i++) {
         const _trap: { trap: Trap, caster: number } = Trap.unserializeV2(splits);
@@ -1020,7 +1044,7 @@ class Game {
       // Set trigger casters
       _entities.forEach(_entity => {
         _entity.triggers.forEach(_trigger => {
-          if (_trigger.caster !== undefined) return;
+          if (_trigger.caster !== null) return;
           if (_trigger._casterId === undefined) {
             _trigger.caster = _entity;
             return;

@@ -5,14 +5,14 @@ import * as React from "react";
 type Props = {
   x: number;
   y: number;
-  id: number;
+  // id: number;
   width: number;
   height: number;
   onMouseEnter: (pos: Coordinates, entityPriority: boolean) => void;
   onMouseLeave: (pos: Coordinates, entityPriority: boolean) => void;
 };
 
-const CellComponent: React.FC<Props> = ({ x, y, id, width, height, onMouseEnter, onMouseLeave }) => {
+const CellComponent: React.FC<Props> = ({ x, y, width, height, onMouseEnter, onMouseLeave }) => {
   const [isHighlighted, setHighlighted] = React.useState(false);
 
   const handleClick = (top: boolean) => {

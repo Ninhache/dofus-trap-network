@@ -1,15 +1,13 @@
 import "@assets/scss/Spells.scss";
+import Game from "@classes/Game";
 import SpellComponent from "@components/SpellComponent";
 import SpellData from "@json/Spells";
-import { Spell } from "@src/@types/SpellDataType";
-import { ActionType, SpellCategory } from "@src/enums";
-import Game from "@classes/Game";
-import Action from "@classes/Action";
-import { forwardRef, useImperativeHandle, useState } from "react";
 import { Nullable } from "@src/@types/NullableType";
-import { useGame } from "@src/context/GameProvider";
+import { Spell } from "@src/@types/SpellDataType";
+import { SpellCategory } from "@src/enums";
+import { forwardRef, useImperativeHandle, useState } from "react";
 
-type Props = { };
+type Props = {};
 
 export interface SpellsComponentRef {
   setPlay: (play: boolean) => void;
@@ -90,7 +88,7 @@ const SpellsComponent = forwardRef<SpellsComponentRef, Props>((props: Props, ref
       />);
     }
     spellCategories.push(
-      <div className="spell-category">
+      <div className="spell-category" key={Math.random()}>
         {spells}
       </div>
     );

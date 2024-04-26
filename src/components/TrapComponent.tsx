@@ -79,9 +79,9 @@ const TrapComponent = forwardRef<TrapComponentRef, Props>((props: Props, ref) =>
     cells.push(<TrapCellComponent
       x={trapCells[j].pos.x}
       y={trapCells[j].pos.y}
-      id={trapCells[j].pos.y * Game.width + trapCells[j].pos.x}
+      // id={trapCells[j].pos.y * Game.width + trapCells[j].pos.x}
       center={center}
-      setHighlight={(highlight: boolean) => { setHighlighted(highlight); }}
+      // setHighlight={(highlight: boolean) => { setHighlighted(highlight); }}
       width={cellWidth}
       height={cellHeight}
       type={TrapClasses[colorToInt(trapCells[j].color)]}

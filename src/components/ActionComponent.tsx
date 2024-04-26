@@ -118,7 +118,8 @@ const ActionComponent = forwardRef<ActionComponentRef, Props>((props: Props, ref
   };
 
   const getCount = (action: { type: EffectType, value: number }) => {
-    const actionText = actionTexts[action.type]; // This will be undefined if not explicitly set
+    // This will be undefined if not explicitly set
+    const actionText = actionTexts[action.type];
 
     if (actionText && 'count' in actionText) {
       return actionText.count;
@@ -130,7 +131,8 @@ const ActionComponent = forwardRef<ActionComponentRef, Props>((props: Props, ref
   }
 
   const getElement = (action: { type: EffectType, value: number }) => {
-    const actionText = actionTexts[action.type]; // This will be undefined if not explicitly set
+    // This will be undefined if not explicitly set
+    const actionText = actionTexts[action.type];
 
      const textElement = actionText?.text as React.ReactElement;
 

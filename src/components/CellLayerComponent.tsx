@@ -55,7 +55,7 @@ const CellLayerComponent: React.FC<Props> = ({ rows, traps }) => {
         />
         <image
           className={`trap-image ${TrapClasses[colorToInt(trap.color)]}`}
-          href={SpellData[trap.spellId].sfx || undefined}
+          href={SpellData[trap.spellId].sfx || "NULL"}
           x={root.x + cellWidth * ((1 - (sizeCoef * imageSizeCoef)) / 2)}
           y={root.y + celHeight * ((1 - (sizeCoef * imageSizeCoef)) / 2)}
           width={cellWidth * sizeCoef * imageSizeCoef}
