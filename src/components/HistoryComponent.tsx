@@ -1,8 +1,8 @@
 import Game from "@classes/Game";
 import "@assets/scss/History.scss";
 import ActionComponent from "./ActionComponent";
-import { ActionType, EffectCategory } from "@src/enums";
-import { forwardRef, useCallback, useImperativeHandle, useState } from "react";
+import { ActionType, EffectCategory, EventValue } from "@src/enums";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
 
 type Props = {};
 
@@ -17,6 +17,8 @@ export interface HistoryComponentRef {
 
 const HistoryComponent = forwardRef<HistoryComponentRef, Props>((props: Props, ref) => {
 
+  
+  
   const [hiddenEffects, setHiddenEffects] = useState<HiddenEffectsState>({
     [EffectCategory.Meta]: false,
     [EffectCategory.Movement]: false,
@@ -26,10 +28,23 @@ const HistoryComponent = forwardRef<HistoryComponentRef, Props>((props: Props, r
     [EffectCategory.Spell]: false,
   });
 
-  const [, forceRender] = useState({});
+  const [forceRender, setForceRender] = useState<number>(0);
 
   const forceUpdate = useCallback(() => {
-    forceRender({});
+    setForceRender(forceRender + 1);
+  }, []);
+
+  useEffect(() => {
+    const handleForceUpdate = () => {
+      forceUpdate();
+    }
+
+    window.addEventListener(EventValue.forceUpdateHistory, handleForceUpdate);
+
+    return () => {
+      window.removeEventListener(EventValue.forceUpdateHistory, handleForceUpdate);
+    }
+
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -40,10 +55,7 @@ const HistoryComponent = forwardRef<HistoryComponentRef, Props>((props: Props, r
   const onFilter = (filter: EffectCategory) => {
     setHiddenEffects(prevState => ({
       ...prevState,
-      hiddenEffects: {
-        ...prevState,
-        [filter]: !prevState[filter]
-      }
+      [filter]: !prevState[filter]
     }));
   };
 

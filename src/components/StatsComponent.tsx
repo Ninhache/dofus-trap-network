@@ -1,14 +1,15 @@
 import "@assets/scss/Stats.scss";
+import Entity from "@classes/Entity";
 import Game from "@classes/Game";
-import { Trans } from "react-i18next";
-import Reorder from 'react-reorder';
+import Trap from "@classes/Trap";
 import MapData from "@json/Maps";
 import SpellData from "@json/Spells";
-import Entity from "@classes/Entity";
-import Trap from "@classes/Trap";
-import ConfigComponent from "./ConfigComponent";
-import { forwardRef, useCallback, useImperativeHandle, useState } from "react";
 import { Nullable } from "@src/@types/NullableType";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useState } from "react";
+import { Trans } from "react-i18next";
+import Reorder from 'react-reorder';
+import ConfigComponent from "./ConfigComponent";
+import { EventValue } from "@src/enums";
 
 type Props = {};
 
@@ -23,10 +24,23 @@ const StatsComponent = forwardRef<StatsComponentRef, Props>((props: Props, ref) 
   const [shareText, setShareText] = useState<string>("");
   const [configObj, setConfigObj] = useState<Nullable<Entity | Trap>>(null);
   const [order, setOrder] = useState<boolean>(false);
-  const [, forceRender] = useState({});
+  const [forceRender, setForceRender] = useState<number>(0);
 
   const forceUpdate = useCallback(() => {
-    forceRender({});
+    setForceRender(forceRender + 1);
+  }, []);
+
+  useEffect(() => {
+    const handleForceUpdate = () => {
+      forceUpdate();
+    }
+
+    window.addEventListener(EventValue.forceUpdateStats, handleForceUpdate);
+
+    return () => {
+      window.removeEventListener(EventValue.forceUpdateStats, handleForceUpdate);
+    }
+
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -137,7 +151,7 @@ const StatsComponent = forwardRef<StatsComponentRef, Props>((props: Props, ref) 
       <button className="shareBtn" onClick={() => { onExport(); }}><Trans>Export</Trans></button>
       {shareText
         ? <div className="shareText" onClick={(e) => { selectContents(e.target as Node); }}>{shareText ?? ""}</div>
-        : undefined
+        : "NULL"
       }
     </div>
     <hr />
