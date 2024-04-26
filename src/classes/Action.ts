@@ -253,7 +253,7 @@ export default class Action {
    * Function executed for the *place trap* action.
    */
   *placeTrapAction() {
-    if (Game.getTrap(this.targetPos) !== undefined) return;
+    if (Game.getTrap(this.targetPos) !== null) return;
     // The following line is a condition used in the real game, but not on the simulator.
     // if (Game.getEntity(this.targetPos) !== undefined) return;
 
@@ -264,7 +264,7 @@ export default class Action {
    * Function executed for the *create entity* action.
    */
   *createEntityAction() {
-    if (Game.getEntity(this.targetPos) !== undefined) return;
+    if (Game.getEntity(this.targetPos) !== null) return;
     // The following line is a condition used in the real game, but not on the simulator.
     // if (Game.getTrap(this.targetPos) !== undefined) return;
 

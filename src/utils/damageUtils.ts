@@ -11,7 +11,8 @@ export function effectToElement(effect: EffectType): SpellElement | undefined {
     [EffectType.AirDamage]: SpellElement.Air,
   };
 
-  return mapping[effect];// TypeScript knows this could be undefined if the effect isn't a key in `mapping`
+  // TypeScript knows this could be undefined if the effect isn't a key in `mapping`
+  return mapping[effect];
 }
 
 /**

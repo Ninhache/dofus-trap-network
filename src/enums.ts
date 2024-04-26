@@ -352,3 +352,9 @@ export interface Buff {
   type: BuffType;
   params: Array<number>;
 }
+
+export enum EventValue {
+  forceUpdateMap = "forceUpdateMap",
+  forceUpdateHistory = "forceUpdateHistory",
+  forceUpdateStats = "forceUpdateStats"
+}
